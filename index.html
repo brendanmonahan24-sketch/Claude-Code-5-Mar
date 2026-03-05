@@ -437,15 +437,15 @@ function stopAudio() {
 // SKELETON HAND DRAWING
 // ──────────────────────────────────────────────
 
-// Finger descriptor: [baseAngle, seg0len, seg1len, seg2len] (angles in radians from vertical)
-// All lengths as fraction of handScale
+// Anatomically correct finger definitions
+// Thumb has 2 phalanges (proximal + distal); fingers have 3 (proximal, middle, distal)
+// segs: fractional lengths; numSegs: 2 for thumb, 3 for fingers
 const FINGER_DEFS = [
-  // [baseX, baseY, baseAngle, seg0, seg1, seg2] — fractions of handScale
-  { name: 'thumb',  bx: -0.38, by: -0.10, angle: -1.15, segs: [0.28, 0.22, 0.18] },
-  { name: 'index',  bx: -0.24, by:  0.42, angle:  0.06, segs: [0.34, 0.26, 0.20] },
-  { name: 'middle', bx: -0.07, by:  0.46, angle:  0.00, segs: [0.37, 0.28, 0.22] },
-  { name: 'ring',   bx:  0.10, by:  0.43, angle: -0.05, segs: [0.34, 0.26, 0.20] },
-  { name: 'pinky',  bx:  0.26, by:  0.34, angle: -0.12, segs: [0.26, 0.20, 0.16] },
+  { name: 'thumb',  bx: -0.36, by: -0.08, angle: -1.05, segs: [0.30, 0.22],          numSegs: 2 },
+  { name: 'index',  bx: -0.22, by:  0.40, angle:  0.08, segs: [0.36, 0.26, 0.18],    numSegs: 3 },
+  { name: 'middle', bx: -0.06, by:  0.44, angle:  0.01, segs: [0.40, 0.28, 0.20],    numSegs: 3 },
+  { name: 'ring',   bx:  0.09, by:  0.41, angle: -0.06, segs: [0.36, 0.26, 0.18],    numSegs: 3 },
+  { name: 'pinky',  bx:  0.24, by:  0.32, angle: -0.14, segs: [0.26, 0.19, 0.13],    numSegs: 3 },
 ];
 
 // Color palette
@@ -456,31 +456,58 @@ const JOINT_GLOW  = 'rgba(200,230,255,0.5)';
 const PALM_COLOR  = 'rgba(200,225,255,0.10)';
 const BONE_STROKE = 'rgba(180,220,255,0.7)';
 
-function drawBone(cx1, cy1, cx2, cy2, r) {
-  const dx = cx2 - cx1, dy = cy2 - cy1;
-  const len = Math.sqrt(dx*dx + dy*dy);
+// Anatomically shaped bone: wide epiphyses at each end, narrow diaphysis (shaft) in the middle.
+// r1 = proximal end radius, r2 = distal end radius.
+function drawBone(x1, y1, x2, y2, r1, r2) {
+  const dx = x2-x1, dy = y2-y1;
+  const len = Math.sqrt(dx*dx+dy*dy);
   if (len < 0.001) return;
+  const nx = -dy/len, ny = dx/len;
+  const ang = Math.atan2(dy, dx);
+  const rS = (r1 + r2) * 0.24; // midshaft (diaphysis) is narrower than either end
 
-  // Glow
   ctx.shadowColor = BONE_GLOW;
   ctx.shadowBlur = 18;
-
-  // Capsule shape
   ctx.beginPath();
-  const nx = -dy/len, ny = dx/len;
-  ctx.moveTo(cx1 + nx*r, cy1 + ny*r);
-  ctx.lineTo(cx2 + nx*r, cy2 + ny*r);
-  ctx.arc(cx2, cy2, r, Math.atan2(dy, dx) - Math.PI/2 + Math.PI, Math.atan2(dy, dx) + Math.PI/2 + Math.PI, true);
-  ctx.lineTo(cx1 - nx*r, cy1 - ny*r);
-  ctx.arc(cx1, cy1, r, Math.atan2(dy, dx) + Math.PI/2 + Math.PI, Math.atan2(dy, dx) - Math.PI/2 + Math.PI, true);
+
+  // Left edge: bezier narrows from base epiphysis → diaphysis → distal epiphysis
+  ctx.moveTo(x1 + nx*r1, y1 + ny*r1);
+  ctx.bezierCurveTo(
+    x1 + nx*rS + dx*0.28, y1 + ny*rS + dy*0.28,
+    x2 + nx*rS - dx*0.28, y2 + ny*rS - dy*0.28,
+    x2 + nx*r2, y2 + ny*r2
+  );
+  // Distal end cap (anticlockwise = counterclockwise in canvas = curves over the tip)
+  ctx.arc(x2, y2, r2, ang + Math.PI/2, ang + Math.PI*3/2, true);
+  // Right edge: bezier back to base
+  ctx.bezierCurveTo(
+    x2 - nx*rS - dx*0.28, y2 - ny*rS - dy*0.28,
+    x1 - nx*rS + dx*0.28, y1 - ny*rS + dy*0.28,
+    x1 - nx*r1, y1 - ny*r1
+  );
+  // Proximal end cap
+  ctx.arc(x1, y1, r1, ang + Math.PI*3/2, ang + Math.PI/2, true);
   ctx.closePath();
 
-  ctx.fillStyle = 'rgba(20,30,50,0.7)';
+  ctx.fillStyle = 'rgba(15,25,45,0.80)';
   ctx.fill();
   ctx.strokeStyle = BONE_STROKE;
   ctx.lineWidth = 1.2;
   ctx.stroke();
   ctx.shadowBlur = 0;
+
+  // Cortical bone highlight — subtle sheen along one side of the shaft
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(200,230,255,0.20)';
+  ctx.lineWidth = Math.max(rS * 0.5, 0.7);
+  ctx.lineCap = 'round';
+  ctx.moveTo(x1 + nx*rS*0.55 + dx*0.10, y1 + ny*rS*0.55 + dy*0.10);
+  ctx.bezierCurveTo(
+    x1 + nx*rS*0.60 + dx*0.32, y1 + ny*rS*0.60 + dy*0.32,
+    x2 + nx*rS*0.60 - dx*0.32, y2 + ny*rS*0.60 - dy*0.32,
+    x2 + nx*rS*0.55 - dx*0.10, y2 + ny*rS*0.55 - dy*0.10
+  );
+  ctx.stroke();
 }
 
 function drawJoint(x, y, r, glow = 1) {
@@ -493,14 +520,41 @@ function drawJoint(x, y, r, glow = 1) {
   ctx.shadowBlur = 0;
 }
 
-function drawPalm(cx, cy, w, h, beat) {
+// Bicondylar knuckle joint (MCP) — two rounded condyle bumps side by side,
+// separated by a shallow intercondylar groove. px/py = perpendicular to bone axis.
+function drawKnuckle(x, y, r, px, py, glow = 1) {
+  const offset = r * 0.40;
+  const cR = r * 0.74;
+  ctx.shadowColor = JOINT_GLOW;
+  ctx.shadowBlur = 14 * glow;
+  for (const sign of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(x + px*offset*sign, y + py*offset*sign, cR, 0, Math.PI*2);
+    ctx.fillStyle = JOINT_COLOR;
+    ctx.fill();
+  }
+  // Intercondylar notch (small dark divot between the two condyles)
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.28, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(10,18,38,0.70)';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// s = handScale; draws metacarpals, carpals, thumb metacarpal
+function drawPalm(cx, cy, s, beat) {
+  const w = s * 0.65;
+  const h = s * 0.60;
+  const bR = s * 0.040; // base bone radius for palm bones
+
   ctx.save();
   ctx.translate(cx, cy);
-  // Palm outline
+
+  // Palm silhouette
   ctx.shadowColor = BONE_GLOW;
   ctx.shadowBlur = 20;
   ctx.beginPath();
-  ctx.ellipse(0, 0, w * 0.5, h * 0.55, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, w * 0.50, h * 0.55, 0, 0, Math.PI * 2);
   ctx.fillStyle = PALM_COLOR;
   ctx.fill();
   ctx.strokeStyle = BONE_STROKE;
@@ -508,25 +562,42 @@ function drawPalm(cx, cy, w, h, beat) {
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Metacarpal lines
-  for (let i = -2; i <= 2; i++) {
-    const x1 = i * w * 0.18;
-    const y1 = h * 0.35;
-    const x2 = i * w * 0.22;
-    const y2 = -h * 0.4;
-    ctx.strokeStyle = 'rgba(160,210,255,0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
+  // Metacarpal bones II–V (index → pinky).
+  // Each runs from a carpal base (near wrist) up to the MCP at the finger base.
+  // Coordinates are palm-relative (cx,cy at origin).
+  // Finger bases match FINGER_DEFS: (def.bx*s, -def.by*s)
+  const metacarpals = [
+    { base: [-0.14*s,  0.22*s], tip: [-0.22*s, -0.40*s] }, // index
+    { base: [-0.05*s,  0.24*s], tip: [-0.06*s, -0.44*s] }, // middle
+    { base: [ 0.05*s,  0.22*s], tip: [ 0.09*s, -0.41*s] }, // ring
+    { base: [ 0.14*s,  0.17*s], tip: [ 0.24*s, -0.32*s] }, // pinky
+  ];
+  for (const mc of metacarpals) {
+    drawBone(mc.base[0], mc.base[1], mc.tip[0], mc.tip[1], bR*0.85, bR*1.05);
   }
 
-  // Wrist bones
-  drawBone(-w*0.18, h*0.4, -w*0.14, h*0.52, w*0.07);
-  drawBone( w*0.18, h*0.4,  w*0.14, h*0.52, w*0.07);
-  drawJoint(-w*0.16, h*0.5, w*0.05);
-  drawJoint( w*0.16, h*0.5, w*0.05);
+  // Thumb metacarpal (I) — from CMC near wrist to thumb MCP
+  drawBone(-0.24*s, 0.18*s, -0.36*s, 0.08*s, bR*0.80, bR*1.00);
+
+  // Carpal bones — two simplified rows at the wrist
+  // Proximal row
+  drawBone(-0.16*s, 0.30*s, -0.04*s, 0.28*s, bR*0.75, bR*0.75);
+  drawBone( 0.02*s, 0.28*s,  0.13*s, 0.27*s, bR*0.75, bR*0.75);
+  // Distal row
+  drawBone(-0.14*s, 0.42*s, -0.03*s, 0.40*s, bR*0.70, bR*0.70);
+  drawBone( 0.02*s, 0.40*s,  0.12*s, 0.41*s, bR*0.70, bR*0.70);
+
+  // Carpal joint dots
+  for (const [x, y] of [
+    [-0.16*s, 0.30*s], [-0.04*s, 0.28*s], [0.02*s, 0.28*s], [0.13*s, 0.27*s],
+    [-0.14*s, 0.43*s], [-0.02*s, 0.41*s], [0.12*s, 0.41*s],
+  ]) {
+    drawJoint(x, y, bR * 0.62);
+  }
+
+  // Wrist (radius/ulna stubs)
+  drawBone(-0.14*s, 0.50*s, -0.10*s, 0.60*s, bR*0.82, bR*0.78);
+  drawBone( 0.04*s, 0.50*s,  0.08*s, 0.60*s, bR*0.82, bR*0.78);
 
   ctx.restore();
 }
@@ -806,66 +877,69 @@ function render(timestamp) {
   const cy = handCY + avgWristY + globalShakeY;
   const s = handScale;
 
-  // Draw palm
-  drawPalm(cx, cy, s * 0.65, s * 0.6, kickStrength);
+  // Draw palm (now includes metacarpal bones)
+  drawPalm(cx, cy, s, kickStrength);
 
   // Draw fingers
   for (let fi = 0; fi < FINGER_DEFS.length; fi++) {
     const def = FINGER_DEFS[fi];
     const fs = fingerStates[fi];
+    const numSegs = def.numSegs || 3;
     const boneR = s * 0.045;
+
+    // Per-segment bone radii: proximal phalanx widest, distal narrowest & tapered
+    // Each pair is [proximal-end-radius, distal-end-radius] for that segment.
+    const segRadii = numSegs === 2
+      ? [[boneR*1.05, boneR*0.88], [boneR*0.80, boneR*0.50]]          // thumb
+      : [[boneR*1.10, boneR*0.92], [boneR*0.86, boneR*0.70], [boneR*0.66, boneR*0.44]]; // fingers
 
     // Finger base in world coords
     const bx = cx + def.bx * s;
     const by = cy - def.by * s;
 
     // Base angle + dance delta + spread
-    let angle = def.angle + (fs.baseAngleDelta || 0) + fi * (fs.spread || 0) * 0.8;
-
-    // Clamp joint angles 0..1 where 1 = fully curled (~1.4 rad)
+    const angle = def.angle + (fs.baseAngleDelta || 0) + fi * (fs.spread || 0) * 0.8;
     const maxCurl = 1.2;
-    const j0 = (fs.j0 || 0) * maxCurl;
-    const j1 = (fs.j1 || 0) * maxCurl;
-    const j2 = (fs.j2 || 0) * maxCurl;
-
-    let px = bx, py = by;
-    let cumAngle = angle; // running angle
-
+    const joints = [(fs.j0||0)*maxCurl, (fs.j1||0)*maxCurl, (fs.j2||0)*maxCurl];
     const segLengths = def.segs.map(l => l * s);
 
-    // Segment 0
-    cumAngle -= j0;
-    let ex0 = px + Math.sin(cumAngle) * segLengths[0];
-    let ey0 = py - Math.cos(cumAngle) * segLengths[0];
-    drawBone(px, py, ex0, ey0, boneR);
-    drawJoint(px, py, boneR * 1.2, 1 + kickStrength * 0.5);
+    // Walk the chain to find all joint positions
+    let cumAngle = angle;
+    const ptx = [bx], pty = [by];
+    for (let si = 0; si < numSegs; si++) {
+      cumAngle -= joints[si];
+      ptx.push(ptx[si] + Math.sin(cumAngle) * segLengths[si]);
+      pty.push(pty[si] - Math.cos(cumAngle) * segLengths[si]);
+    }
 
-    // Segment 1
-    cumAngle -= j1;
-    let ex1 = ex0 + Math.sin(cumAngle) * segLengths[1];
-    let ey1 = ey0 - Math.cos(cumAngle) * segLengths[1];
-    drawBone(ex0, ey0, ex1, ey1, boneR * 0.9);
-    drawJoint(ex0, ey0, boneR * 1.05);
+    // Draw bone segments
+    for (let si = 0; si < numSegs; si++) {
+      const [r1, r2] = segRadii[si];
+      drawBone(ptx[si], pty[si], ptx[si+1], pty[si+1], r1, r2);
+    }
 
-    // Segment 2 (fingertip)
-    cumAngle -= j2;
-    let ex2 = ex1 + Math.sin(cumAngle) * segLengths[2];
-    let ey2 = ey1 - Math.cos(cumAngle) * segLengths[2];
-    drawBone(ex1, ey1, ex2, ey2, boneR * 0.75);
-    drawJoint(ex1, ey1, boneR * 0.9);
+    // MCP knuckle joint (base of finger) — bicondylar shape
+    const perpX = Math.cos(angle), perpY = Math.sin(angle);
+    drawKnuckle(ptx[0], pty[0], boneR * 1.25, perpX, perpY, 1 + kickStrength * 0.5);
 
-    // Fingertip cap
-    drawJoint(ex2, ey2, boneR * 0.65, 0.8);
+    // Interphalangeal (IP) joints
+    for (let si = 1; si < numSegs; si++) {
+      drawJoint(ptx[si], pty[si], segRadii[si][0] * 0.90);
+    }
+
+    // Distal tuft (fingertip)
+    drawJoint(ptx[numSegs], pty[numSegs], segRadii[numSegs-1][1] * 0.88, 0.7);
 
     // Tap spark at fingertip on beat
     if (kickStrength > 0.6 && (fi === 1 || fi === 3)) {
+      const tx = ptx[numSegs], ty = pty[numSegs];
       ctx.globalAlpha = kickStrength * 0.6;
-      const sparkG = ctx.createRadialGradient(ex2, ey2, 0, ex2, ey2, 15);
+      const sparkG = ctx.createRadialGradient(tx, ty, 0, tx, ty, 15);
       sparkG.addColorStop(0, '#ffffaa');
       sparkG.addColorStop(1, 'transparent');
       ctx.fillStyle = sparkG;
       ctx.beginPath();
-      ctx.arc(ex2, ey2, 15, 0, Math.PI*2);
+      ctx.arc(tx, ty, 15, 0, Math.PI*2);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
