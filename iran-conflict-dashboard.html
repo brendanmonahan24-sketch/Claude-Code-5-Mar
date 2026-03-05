@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iran Conflict Dashboard — March 2026</title>
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #111827;
+      --surface2: #1c2333;
+      --border: #2a3347;
+      --red: #ef4444;
+      --red-dim: #7f1d1d;
+      --orange: #f97316;
+      --yellow: #fbbf24;
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --cyan: #06b6d4;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a0505 0%, #0a0c10 60%);
+      border-bottom: 1px solid var(--red-dim);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 16px; }
+
+    .pulse-dot {
+      width: 12px; height: 12px;
+      background: var(--red);
+      border-radius: 50%;
+      animation: pulse 1.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,.6); }
+      50% { opacity: .85; transform: scale(1.15); box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+
+    header h1 { font-size: 22px; font-weight: 700; letter-spacing: .3px; }
+    header h1 span { color: var(--red); }
+
+    .header-meta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    .badge {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .8px; padding: 4px 10px; border-radius: 4px;
+    }
+    .badge-live { background: var(--red-dim); color: #fca5a5; border: 1px solid var(--red); }
+    .badge-day  { background: #1e293b; color: var(--yellow); border: 1px solid #78350f; }
+    .timestamp  { color: var(--text-muted); font-size: 12px; }
+
+    /* ── Layout ── */
+    main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    @media (max-width: 1100px) {
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .span-3 { grid-column: span 2; }
+    }
+    @media (max-width: 680px) {
+      .grid-3, .grid-2, .grid-4 { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: span 1; }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-icon { font-size: 16px; }
+    .card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); }
+
+    /* ── Stat tiles ── */
+    .stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .6px; }
+    .stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+    .stat-sub   { font-size: 11px; color: var(--text-muted); }
+    .stat-red    { color: var(--red); }
+    .stat-orange { color: var(--orange); }
+    .stat-yellow { color: var(--yellow); }
+    .stat-blue   { color: var(--blue); }
+    .stat-green  { color: var(--green); }
+    .stat-purple { color: var(--purple); }
+    .stat-cyan   { color: var(--cyan); }
+
+    /* ── Timeline ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item { display: flex; gap: 12px; position: relative; }
+    .tl-item:not(:last-child) .tl-line {
+      position: absolute; left: 16px; top: 28px; bottom: 0;
+      width: 1px; background: var(--border);
+    }
+    .tl-dot {
+      width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+      position: relative; z-index: 1; margin-left: 11px;
+    }
+    .tl-body { padding-bottom: 14px; flex: 1; }
+    .tl-date { font-size: 11px; color: var(--text-dim); margin-bottom: 2px; }
+    .tl-text { font-size: 13px; color: var(--text); }
+    .tl-text strong { color: var(--yellow); }
+
+    /* ── Country rows ── */
+    .country-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .country-row:last-child { border-bottom: none; }
+    .country-flag { font-size: 20px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+    .country-name { font-weight: 600; font-size: 13px; color: var(--text); }
+    .country-desc { font-size: 12px; color: var(--text-muted); }
+    .country-tag {
+      margin-left: auto; flex-shrink: 0;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 3px; letter-spacing: .5px;
+    }
+    .tag-attacker  { background: #7f1d1d; color: #fca5a5; }
+    .tag-target    { background: #7c2d12; color: #fed7aa; }
+    .tag-struck    { background: #713f12; color: #fef08a; }
+    .tag-ally      { background: #1e3a5f; color: #93c5fd; }
+    .tag-nato      { background: #1e3a5f; color: #93c5fd; }
+    .tag-neutral   { background: #1c2942; color: #94a3b8; }
+    .tag-threatened{ background: #3b1a6e; color: #c4b5fd; }
+
+    /* ── Oil price bar ── */
+    .price-bar-wrap { margin-bottom: 12px; }
+    .price-bar-label { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; }
+    .price-bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .price-bar-fill  { height: 100%; border-radius: 4px; transition: width .6s ease; }
+
+    /* ── Alert strip ── */
+    .alert-strip {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: #1a0505; border: 1px solid #7f1d1d;
+      border-radius: 8px; padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .alert-strip:last-child { margin-bottom: 0; }
+    .alert-icon { font-size: 16px; flex-shrink: 0; }
+    .alert-text { font-size: 13px; color: #fca5a5; }
+    .alert-text strong { color: #fef2f2; }
+
+    /* ── Casualties table ── */
+    .cas-table { width: 100%; border-collapse: collapse; }
+    .cas-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-dim); padding: 0 8px 8px; font-weight: 600; }
+    .cas-table td { padding: 7px 8px; font-size: 13px; border-top: 1px solid var(--border); }
+    .cas-table tr:hover td { background: var(--surface2); }
+    .dot-red    { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-right: 6px; }
+    .dot-orange { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--orange); margin-right: 6px; }
+    .dot-yellow { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--yellow); margin-right: 6px; }
+    .dot-blue   { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-right: 6px; }
+
+    /* ── Progress ── */
+    .prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .prog-label { width: 120px; font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+    .prog-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .prog-fill  { height: 100%; border-radius: 3px; }
+    .prog-val   { width: 48px; text-align: right; font-size: 12px; font-weight: 600; color: var(--text); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center; padding: 20px;
+      color: var(--text-dim); font-size: 11px;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    .section-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-left">
+    <div class="pulse-dot"></div>
+    <h1><span>IRAN CONFLICT</span> SITUATION DASHBOARD</h1>
+  </div>
+  <div class="header-meta">
+    <span class="badge badge-live">Live Monitoring</span>
+    <span class="badge badge-day">Day 6 — Operation Epic Fury</span>
+    <span class="timestamp">Last updated: March 5, 2026 · 00:00 UTC</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── ALERTS ── -->
+  <div>
+    <div class="section-label">Active Alerts</div>
+    <div class="alert-strip">
+      <span class="alert-icon">&#9888;</span>
+      <div class="alert-text"><strong>Strait of Hormuz declared closed</strong> — IRGC has officially shut the strait; tanker traffic has dropped to near zero. ~20% of global oil supply at risk. Insurance suspended for passage as of March 5.</div>
+    </div>
+    <div class="alert-strip">
+      <span class="alert-icon">&#9762;</span>
+      <div class="alert-text"><strong>Iranian Supreme Leader killed</strong> — Ali Khamenei confirmed dead by Iranian state media on March 1. No successor named; US has declared Mojtaba Khamenei "unacceptable."</div>
+    </div>
+    <div class="alert-strip">
+      <span class="alert-icon">&#128308;</span>
+      <div class="alert-text"><strong>Kurdish ground offensive reported</strong> — Kurdish-Iranian armed groups have launched a ground offensive in northwest Iran against the Islamic government. US officials have reportedly asked Iraqi Kurds to join.</div>
+    </div>
+  </div>
+
+  <!-- ── KEY STATS ── -->
+  <div class="grid-4">
+    <div class="stat">
+      <div class="stat-label">Iranian Casualties</div>
+      <div class="stat-value stat-red">1,230+</div>
+      <div class="stat-sub">Since Feb 28 · +787 confirmed by Red Crescent</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">US Targets Struck in Iran</div>
+      <div class="stat-value stat-orange">~2,000</div>
+      <div class="stat-sub">Per US CENTCOM statement</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Iranian Missiles / Drones Fired</div>
+      <div class="stat-value stat-yellow">500+ / 2,000+</div>
+      <div class="stat-sub">Ballistic missiles / drones launched at US &amp; allies</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Brent Crude (est.)</div>
+      <div class="stat-value stat-blue">~$82</div>
+      <div class="stat-sub">+13% vs pre-conflict · $100+ feared</div>
+    </div>
+  </div>
+
+  <!-- ── MILITARY + TIMELINE ── -->
+  <div class="grid-2">
+
+    <!-- Military developments -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#9876;</span>
+        <span class="card-title">Military Developments</span>
+      </div>
+      <div class="timeline">
+
+        <div class="tl-item">
+          <div class="tl-line"></div>
+          <div class="tl-dot" style="background:var(--red)"></div>
+          <div class="tl-body">
+            <div class="tl-date">Mar 5, 2026 — Day 6</div>
+            <div class="tl-text">Israel launches <strong>new wave of strikes</strong> on military infrastructure in Tehran. US &amp; Israel claim air supremacy over Iran. Kurdish forces in northern Iraq on <strong>standby</strong> to join ground offensive in NW Iran.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-line"></div>
+          <div class="tl-dot" style="background:var(--orange)"></div>
+          <div class="tl-body">
+            <div class="tl-date">Mar 4, 2026 — Day 5</div>
+            <div class="tl-text">US submarine <strong>sinks IRIS Dena</strong> (Iranian frigate) in the Indian Ocean off Sri Lanka — 87 bodies recovered, 32 rescued. Israeli jet scores <strong>first air-to-air kill</strong> of a piloted aircraft in the conflict.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-line"></div>
+          <div class="tl-dot" style="background:var(--yellow)"></div>
+          <div class="tl-body">
+            <div class="tl-date">Mar 3, 2026 — Day 4</div>
+            <div class="tl-text">US &amp; Israeli strikes destroy <strong>Supreme National Security Council HQ</strong>, Expediency Discernment Council building, and alleged underground <strong>nuclear facility "Min Zadai"</strong>. Qatar halts LNG production after Iranian drone strikes on Ras Laffan.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-line"></div>
+          <div class="tl-dot" style="background:var(--green)"></div>
+          <div class="tl-body">
+            <div class="tl-date">Mar 2, 2026 — Day 3</div>
+            <div class="tl-text">Hezbollah resumes attacks on <strong>northern Israel</strong> for first time since Nov 2024. Lebanese government announces it will <strong>ban Hezbollah's military activities</strong>. IRGC officially confirms Hormuz closure. Iran's internet shut down by authorities.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-line"></div>
+          <div class="tl-dot" style="background:var(--purple)"></div>
+          <div class="tl-body">
+            <div class="tl-date">Mar 1, 2026 — Day 2</div>
+            <div class="tl-text"><strong>Supreme Leader Khamenei killed</strong> — confirmed by Iranian state media. 40 days of mourning declared. NATO air defenses <strong>intercept Iranian missile</strong> traveling toward Türkiye — first such intercept since conflict began.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--blue)"></div>
+          <div class="tl-body">
+            <div class="tl-date">Feb 28, 2026 — Day 1</div>
+            <div class="tl-text"><strong>Operation Epic Fury begins</strong> at 2:30 AM EST. US &amp; Israel launch coordinated strikes targeting Iranian leadership, nuclear sites, and missile infrastructure. Trump cites nuclear ambitions and regime change as goals. School in Minab struck — <strong>~180 children killed</strong>.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Casualties -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#128276;</span>
+        <span class="card-title">Casualties &amp; Incidents</span>
+      </div>
+      <table class="cas-table">
+        <thead>
+          <tr>
+            <th>Party / Location</th>
+            <th>Killed</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="dot-red"></span>Iran (total)</td>
+            <td class="stat-red" style="font-weight:700">1,230+</td>
+            <td style="color:var(--text-muted)">Tasnim news agency</td>
+          </tr>
+          <tr>
+            <td><span class="dot-red"></span>Minab school strike</td>
+            <td class="stat-red" style="font-weight:700">~180</td>
+            <td style="color:var(--text-muted)">Girls' elementary school</td>
+          </tr>
+          <tr>
+            <td><span class="dot-orange"></span>IRIS Dena crew</td>
+            <td class="stat-orange" style="font-weight:700">87+</td>
+            <td style="color:var(--text-muted)">Iranian frigate, Indian Ocean</td>
+          </tr>
+          <tr>
+            <td><span class="dot-blue"></span>US soldiers</td>
+            <td class="stat-blue" style="font-weight:700">6</td>
+            <td style="color:var(--text-muted)">4 killed in Kuwait strike</td>
+          </tr>
+          <tr>
+            <td><span class="dot-yellow"></span>UAE (projectiles)</td>
+            <td class="stat-yellow">—</td>
+            <td style="color:var(--text-muted)">800+ projectiles absorbed; Dubai hotel &amp; Jebel Ali Port struck</td>
+          </tr>
+          <tr>
+            <td><span class="dot-yellow"></span>Saudi Arabia</td>
+            <td style="color:var(--text-muted)">—</td>
+            <td style="color:var(--text-muted)">Ras Tanura refinery partially shut</td>
+          </tr>
+          <tr>
+            <td><span class="dot-yellow"></span>WHO — health sites</td>
+            <td style="color:var(--text-muted)">—</td>
+            <td style="color:var(--text-muted)">13 Iranian health facilities struck</td>
+          </tr>
+          <tr>
+            <td><span class="dot-blue"></span>Khamenei's wife</td>
+            <td class="stat-blue" style="font-weight:700">1</td>
+            <td style="color:var(--text-muted)">Died of injuries, Mar 2</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:16px">
+        <div class="section-label">Iranian Retaliatory Strike Targets</div>
+        <div class="prog-row"><div class="prog-label">US Bases hit</div><div class="prog-track"><div class="prog-fill" style="width:90%;background:var(--red)"></div></div><div class="prog-val">27 bases</div></div>
+        <div class="prog-row"><div class="prog-label">Iran missiles vs Israel</div><div class="prog-track"><div class="prog-fill" style="width:72%;background:var(--orange)"></div></div><div class="prog-val">90+ attempts</div></div>
+        <div class="prog-row"><div class="prog-label">UAE projectiles absorbed</div><div class="prog-track"><div class="prog-fill" style="width:55%;background:var(--yellow)"></div></div><div class="prog-val">800+</div></div>
+        <div class="prog-row"><div class="prog-label">NATO intercepts</div><div class="prog-track"><div class="prog-fill" style="width:15%;background:var(--blue)"></div></div><div class="prog-val">1 (Türkiye)</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── REGIONAL + ECONOMY ── -->
+  <div class="grid-3">
+
+    <!-- Countries involved -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#127760;</span>
+        <span class="card-title">Countries &amp; Actors Involved</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127482;&#127480;</div>
+        <div>
+          <div class="country-name">United States</div>
+          <div class="country-desc">Leading strikes (Op. Epic Fury). ~2,000 targets hit. Sank Iranian warship. Senate blocked War Powers vote 53-47.</div>
+        </div>
+        <span class="country-tag tag-attacker">Attacker</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127470;&#127473;</div>
+        <div>
+          <div class="country-name">Israel</div>
+          <div class="country-desc">Co-leads strikes. Targeting leadership, nuclear sites, and Hezbollah in Lebanon. First air-to-air kill claimed.</div>
+        </div>
+        <span class="country-tag tag-attacker">Attacker</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127470;&#127479;</div>
+        <div>
+          <div class="country-name">Iran</div>
+          <div class="country-desc">Supreme Leader Khamenei killed. 500+ ballistic missiles &amp; 2,000+ drones fired. Internet blocked. Hormuz closed.</div>
+        </div>
+        <span class="country-tag tag-target">Target</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127473;&#127463;</div>
+        <div>
+          <div class="country-name">Lebanon / Hezbollah</div>
+          <div class="country-desc">Hezbollah resumed attacks on northern Israel (Mar 2). Lebanese govt moves to disarm Hezbollah.</div>
+        </div>
+        <span class="country-tag tag-struck">Struck</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127462;&#127466;</div>
+        <div>
+          <div class="country-name">United Arab Emirates</div>
+          <div class="country-desc">800+ projectiles hit. Dubai hotel &amp; Jebel Ali Port struck. Closed Tehran embassy. Considering military action.</div>
+        </div>
+        <span class="country-tag tag-struck">Struck</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127478;&#127462;</div>
+        <div>
+          <div class="country-name">Qatar</div>
+          <div class="country-desc">LNG production halted after Ras Laffan strike. Shot down 2 Iranian jets. FM calling for immediate halt.</div>
+        </div>
+        <span class="country-tag tag-struck">Struck</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127480;&#127462;</div>
+        <div>
+          <div class="country-name">Saudi Arabia</div>
+          <div class="country-desc">Ras Tanura refinery (world's largest) partially shut after Iranian drone strike. US embassy in KSA also hit.</div>
+        </div>
+        <span class="country-tag tag-struck">Struck</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127468;&#127463;</div>
+        <div>
+          <div class="country-name">United Kingdom</div>
+          <div class="country-desc">UK base in Cyprus struck by Iranian drone. PM Starmer authorized US use of UK air bases. Royal Navy deployed.</div>
+        </div>
+        <span class="country-tag tag-ally">Ally</span>
+      </div>
+
+      <div class="country-row">
+        <div class="country-flag">&#127481;&#127479;</div>
+        <div>
+          <div class="country-name">Türkiye (NATO)</div>
+          <div class="country-desc">NATO air defense intercepted Iranian ballistic missile entering Türkiye's airspace — first such intercept.</div>
+        </div>
+        <span class="country-tag tag-nato">NATO</span>
+      </div>
+
+    </div>
+
+    <!-- Economic impact -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#128202;</span>
+        <span class="card-title">Economic &amp; Energy Impact</span>
+      </div>
+
+      <div class="section-label" style="margin-bottom:10px">Oil Price Scenarios (Brent)</div>
+      <div class="price-bar-wrap">
+        <div class="price-bar-label"><span style="color:var(--text-muted)">Pre-conflict baseline</span><span style="color:var(--green)">~$70/bbl</span></div>
+        <div class="price-bar-track"><div class="price-bar-fill" style="width:35%;background:var(--green)"></div></div>
+      </div>
+      <div class="price-bar-wrap">
+        <div class="price-bar-label"><span style="color:var(--text-muted)">Current estimate</span><span style="color:var(--yellow)">~$82/bbl (+13%)</span></div>
+        <div class="price-bar-track"><div class="price-bar-fill" style="width:52%;background:var(--yellow)"></div></div>
+      </div>
+      <div class="price-bar-wrap">
+        <div class="price-bar-label"><span style="color:var(--text-muted)">Sustained disruption (JPMorgan)</span><span style="color:var(--orange)">$120/bbl</span></div>
+        <div class="price-bar-track"><div class="price-bar-fill" style="width:65%;background:var(--orange)"></div></div>
+      </div>
+      <div class="price-bar-wrap">
+        <div class="price-bar-label"><span style="color:var(--text-muted)">Full Hormuz mine closure (Deutsche Bank)</span><span style="color:var(--red)">$200/bbl</span></div>
+        <div class="price-bar-track"><div class="price-bar-fill" style="width:100%;background:var(--red)"></div></div>
+      </div>
+
+      <div style="margin-top:18px">
+        <div class="section-label" style="margin-bottom:10px">Market Impacts</div>
+
+        <div class="prog-row"><div class="prog-label">KOSPI (Korea)</div><div class="prog-track"><div class="prog-fill" style="width:12%;background:var(--red)"></div></div><div class="prog-val stat-red">-12%</div></div>
+        <div class="prog-row"><div class="prog-label">Pakistan KSE-100</div><div class="prog-track"><div class="prog-fill" style="width:9.57%;background:var(--red)"></div></div><div class="prog-val stat-red">-9.6%</div></div>
+        <div class="prog-row"><div class="prog-label">Nikkei (Japan)</div><div class="prog-track"><div class="prog-fill" style="width:2%;background:var(--orange)"></div></div><div class="prog-val stat-orange">-2%</div></div>
+        <div class="prog-row"><div class="prog-label">EU Nat Gas (€/MWh)</div><div class="prog-track"><div class="prog-fill" style="width:75%;background:var(--yellow)"></div></div><div class="prog-val stat-yellow">€60+</div></div>
+        <div class="prog-row"><div class="prog-label">LNG tanker freight</div><div class="prog-track"><div class="prog-fill" style="width:40%;background:var(--orange)"></div></div><div class="prog-val stat-orange">+40%</div></div>
+      </div>
+
+      <div style="margin-top:18px">
+        <div class="section-label" style="margin-bottom:10px">Strait of Hormuz</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <span class="badge" style="background:#7f1d1d;color:#fca5a5;border:1px solid var(--red)">CLOSED</span>
+          <span class="badge" style="background:#713f12;color:#fef08a;border:1px solid var(--yellow)">~20% Global Oil Supply</span>
+          <span class="badge" style="background:#1c2942;color:#94a3b8;border:1px solid var(--border)">Tanker traffic ≈ 0</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.6">
+          Maersk &amp; Hapag-Lloyd have suspended all transits. 150+ ships anchored outside the strait.
+          Qatar LNG halt disrupted European gas supply — EU prices doubled in 48 hours.
+          Suez Canal rerouted to Cape of Good Hope adding weeks of transit time.
+        </div>
+      </div>
+    </div>
+
+    <!-- Political / Diplomatic -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#127963;</span>
+        <span class="card-title">Political &amp; Diplomatic</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:6px">US Senate Vote</div>
+          <div style="font-size:13px;color:var(--text)">Senate <strong style="color:var(--red)">rejected 53–47</strong> a bipartisan War Powers resolution that would have required Trump to seek Congressional approval. Republicans blocked the vote; conflict continues without Congressional authorization.</div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:6px">Iran Leadership Vacuum</div>
+          <div style="font-size:13px;color:var(--text)">Supreme Leader Khamenei killed Mar 1. His son <strong style="color:var(--yellow)">Mojtaba Khamenei</strong> reportedly being considered — but Trump has declared him "unacceptable" and says the US must be involved in choosing a successor.</div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:6px">UN / IAEA</div>
+          <div style="font-size:13px;color:var(--text)">UN Secretary-General urges immediate restraint. <strong style="color:var(--cyan)">IAEA contradicts US/Israeli claims</strong> — says Iran was not days or weeks away from nuclear weapons. WHO documents 13 Iranian health sites struck.</div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:6px">Qatar Mediation Attempt</div>
+          <div style="font-size:13px;color:var(--text)">Qatar's FM contacted Iranian counterpart — first such contact since the conflict began — demanding an <strong style="color:var(--yellow)">immediate halt</strong> to strikes. Qatar warns Iran is trying to drag neighbours into the war.</div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:6px">Amnesty International</div>
+          <div style="font-size:13px;color:var(--text)">Issued urgent call to protect civilians and respect international humanitarian law. Iran's internet shutdown condemned as blocking flow of information about IHL violations.</div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:6px">Pre-War Diplomacy</div>
+          <div style="font-size:13px;color:var(--text)">3 rounds of indirect Geneva talks. Trump issued a 10-day deadline on Feb 20. Strikes launched after 3rd round on Feb 26 failed to produce a deal.</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── NUCLEAR + KEY QUOTES ── -->
+  <div class="grid-2">
+
+    <!-- Nuclear situation -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#9762;</span>
+        <span class="card-title">Nuclear Situation</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="alert-strip" style="border-color:#4c1d95;background:#0f0a1e">
+          <span class="alert-icon">&#9762;</span>
+          <div class="alert-text" style="color:#c4b5fd"><strong style="color:#ede9fe">Natanz facility struck</strong> — Iranian media reports no radioactive leakage detected. Struck during initial wave of attacks.</div>
+        </div>
+        <div class="alert-strip" style="border-color:#4c1d95;background:#0f0a1e">
+          <span class="alert-icon">&#9762;</span>
+          <div class="alert-text" style="color:#c4b5fd"><strong style="color:#ede9fe">Underground site "Min Zadai" destroyed</strong> — described by Israeli officials as an underground nuclear weapons facility. Struck March 3.</div>
+        </div>
+        <div class="alert-strip" style="border-color:#1e3a5f;background:#0a1628">
+          <span class="alert-icon">&#128736;</span>
+          <div class="alert-text" style="color:#93c5fd"><strong style="color:#dbeafe">Bushehr Nuclear Power Plant (Rosatom)</strong> — Strikes came within 12 km of plant. Russia's Rosatom suspended construction and evacuated non-essential staff due to loss of communication with Iranian officials.</div>
+        </div>
+        <div class="alert-strip" style="border-color:#064e3b;background:#052016">
+          <span class="alert-icon">&#128203;</span>
+          <div class="alert-text" style="color:#6ee7b7"><strong style="color:#d1fae5">IAEA assessment</strong> — UN nuclear watchdog <em>contradicts</em> US/Israeli claims: Iran was NOT days or weeks from having atomic weapons. US/Israel cited nuclear threat as primary casus belli.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key quotes -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">&#128172;</span>
+        <span class="card-title">Key Statements</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <div style="border-left:3px solid var(--red);padding-left:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:3px">Pete Hegseth — US Sec. of Defense</div>
+          <div style="font-size:13px;color:var(--text);font-style:italic">"America is winning." / "We are just getting started." / The US is "accelerating, not decelerating" the war on Iran.</div>
+        </div>
+
+        <div style="border-left:3px solid var(--orange);padding-left:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--orange);margin-bottom:3px">Donald Trump — US President</div>
+          <div style="font-size:13px;color:var(--text);font-style:italic">The purpose of US strikes was effectively regime change, citing Iran's "menacing activities," support for proxies such as Hamas and Hezbollah, and its alleged pursuit of nuclear weapons.</div>
+        </div>
+
+        <div style="border-left:3px solid var(--blue);padding-left:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:3px">Benjamin Netanyahu — Israeli PM</div>
+          <div style="font-size:13px;color:var(--text);font-style:italic">"The goal of the strikes was to remove the existential threat posed by the terrorist regime in Iran."</div>
+        </div>
+
+        <div style="border-left:3px solid var(--cyan);padding-left:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:3px">IAEA — UN Nuclear Watchdog</div>
+          <div style="font-size:13px;color:var(--text);font-style:italic">Iran was not days or weeks away from having atomic weapons — contradicting the stated justification for strikes.</div>
+        </div>
+
+        <div style="border-left:3px solid var(--purple);padding-left:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--purple);margin-bottom:3px">Ali Vaez — International Crisis Group</div>
+          <div style="font-size:13px;color:var(--text);font-style:italic">"The shock would reverberate far beyond energy markets, tightening financial conditions, fuelling inflation, and pushing fragile economies closer to recession in a matter of weeks."</div>
+        </div>
+
+        <div style="border-left:3px solid var(--yellow);padding-left:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:3px">US Admiral Brad Cooper</div>
+          <div style="font-size:13px;color:var(--text);font-style:italic">Iran has launched more than 500 ballistic missiles and 2,000 drones in retaliation, striking US bases across the Middle East and Israeli military facilities.</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p style="margin-bottom:6px;color:var(--text-muted)">Sources — March 5, 2026</p>
+  <p style="line-height:2">
+    <a href="https://www.aljazeera.com/news/2026/3/5/iran-war-what-is-happening-on-day-six-of-us-israel-attacks" target="_blank">Al Jazeera — Day 6</a> &nbsp;|&nbsp;
+    <a href="https://en.wikipedia.org/wiki/2026_Iran_conflict" target="_blank">Wikipedia — 2026 Iran conflict</a> &nbsp;|&nbsp;
+    <a href="https://www.cbsnews.com/live-updates/us-iran-war-israel-strikes-tehran-lebanon-day-5-al-udeid-targeted/" target="_blank">CBS News Live</a> &nbsp;|&nbsp;
+    <a href="https://www.cnn.com/2026/03/03/middleeast/iran-us-israel-what-we-know-intl-hnk" target="_blank">CNN — Day 5</a> &nbsp;|&nbsp;
+    <a href="https://news.un.org/en/story/2026/03/1167076" target="_blank">UN News</a> &nbsp;|&nbsp;
+    <a href="https://acleddata.com/update/middle-east-special-issue-march-2026" target="_blank">ACLED March 2026</a> &nbsp;|&nbsp;
+    <a href="https://commonslibrary.parliament.uk/research-briefings/cbp-10521/" target="_blank">UK House of Commons Library</a> &nbsp;|&nbsp;
+    <a href="https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis" target="_blank">Strait of Hormuz Crisis</a> &nbsp;|&nbsp;
+    <a href="https://www.amnesty.org/en/latest/news/2026/03/urgent-call-to-protect-civilians-and-respect-international-law-amid-escalating-regional-conflict-following-us-and-israeli-attacks-on-iran/" target="_blank">Amnesty International</a> &nbsp;|&nbsp;
+    <a href="https://time.com/7382242/strait-of-hormuz-closure-threat-iran-war-trade-gas-oil-prices/" target="_blank">TIME — Hormuz &amp; Oil</a> &nbsp;|&nbsp;
+    <a href="https://www.cnbc.com/2026/03/02/iran-oil-gas-prices-strait-hormuz.html" target="_blank">CNBC — Oil Scenarios</a> &nbsp;|&nbsp;
+    <a href="https://www.axios.com/2026/03/03/iran-war-countries-gulf-qatar-us" target="_blank">Axios — Countries Involved</a>
+  </p>
+  <p style="margin-top:10px;color:var(--text-dim);font-size:10px">
+    This dashboard is for informational purposes only. All data sourced from publicly available news reports.
+    Situation is rapidly evolving — verify with live sources.
+  </p>
+</footer>
+
+</body>
+</html>
