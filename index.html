@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Dancing Skeleton Hand</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #080810;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      color: #fff;
+      touch-action: manipulation;
+    }
+
+    #title {
+      font-size: clamp(14px, 3vw, 22px);
+      letter-spacing: 0.3em;
+      color: #b8d4ff;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      text-shadow: 0 0 20px rgba(120, 180, 255, 0.8);
+    }
+
+    #canvas {
+      display: block;
+      cursor: pointer;
+    }
+
+    #controls {
+      width: 100%;
+      max-width: 640px;
+      padding: 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #556;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .style-btn {
+      flex: 1;
+      min-width: 70px;
+      padding: 8px 4px;
+      border: 1px solid #334;
+      background: rgba(255,255,255,0.04);
+      color: #889;
+      border-radius: 6px;
+      font-size: clamp(10px, 2vw, 13px);
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .style-btn:hover { background: rgba(120,160,255,0.12); color: #aac; border-color: #446; }
+    .style-btn.active {
+      background: rgba(100,140,255,0.2);
+      color: #a8d0ff;
+      border-color: #558;
+      text-shadow: 0 0 10px rgba(120,180,255,0.6);
+      box-shadow: 0 0 12px rgba(80,120,255,0.2);
+    }
+
+    .music-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #play-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid #446;
+      background: rgba(80,120,255,0.15);
+      color: #a8d0ff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    #play-btn:hover { background: rgba(80,120,255,0.3); box-shadow: 0 0 16px rgba(80,120,255,0.4); }
+
+    .music-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: 1px solid #334;
+      background: rgba(255,255,255,0.04);
+      color: #889;
+      border-radius: 6px;
+      font-size: clamp(9px, 1.8vw, 12px);
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .music-btn:hover { background: rgba(255,180,80,0.1); color: #cc9; border-color: #554; }
+    .music-btn.active {
+      background: rgba(220,160,60,0.18);
+      color: #ffd080;
+      border-color: #664;
+      text-shadow: 0 0 8px rgba(255,200,80,0.5);
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-label {
+      font-size: 10px;
+      color: #556;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+      min-width: 40px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 3px;
+      background: #223;
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #6688cc;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(80,120,255,0.5);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #6688cc;
+      cursor: pointer;
+      border: none;
+    }
+
+    #beat-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #334;
+      transition: background 0.05s;
+      flex-shrink: 0;
+    }
+    #beat-indicator.pulse { background: #ff6644; box-shadow: 0 0 12px #ff6644; }
+
+    #mic-btn {
+      padding: 6px 12px;
+      border: 1px solid #334;
+      background: rgba(255,255,255,0.04);
+      color: #889;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    #mic-btn:hover { background: rgba(120,255,120,0.1); color: #aca; border-color: #454; }
+    #mic-btn.active { background: rgba(60,220,80,0.15); color: #80ff90; border-color: #464; text-shadow: 0 0 8px rgba(80,255,100,0.5); }
+
+    #footer {
+      font-size: 9px;
+      color: #334;
+      letter-spacing: 0.1em;
+      text-align: center;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="title">&#9760; Dancing Skeleton Hand &#9760;</div>
+<canvas id="canvas"></canvas>
+
+<div id="controls">
+  <div>
+    <div class="section-label">Dance Style</div>
+    <div class="btn-row" id="dance-btns">
+      <button class="style-btn active" data-style="tap">Tap Dance</button>
+      <button class="style-btn" data-style="wave">Wave</button>
+      <button class="style-btn" data-style="jazz">Jazz Hands</button>
+      <button class="style-btn" data-style="robot">Robot</button>
+      <button class="style-btn" data-style="thriller">Thriller</button>
+      <button class="style-btn" data-style="rave">Rave</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label">Music</div>
+    <div class="music-row">
+      <button id="play-btn" title="Play/Pause">&#9654;</button>
+      <button class="music-btn active" data-music="hiphop">Hip-Hop</button>
+      <button class="music-btn" data-music="waltz">Waltz</button>
+      <button class="music-btn" data-music="techno">Techno</button>
+      <button class="music-btn" data-music="salsa">Salsa</button>
+      <div id="beat-indicator"></div>
+    </div>
+  </div>
+
+  <div class="slider-row">
+    <span class="slider-label">TEMPO</span>
+    <input type="range" id="tempo-slider" min="40" max="200" value="90">
+    <span class="slider-label" id="tempo-val">90 BPM</span>
+    <button id="mic-btn" title="Use microphone beat detection">&#127908; MIC</button>
+  </div>
+</div>
+
+<div id="footer">Click canvas to toggle play &nbsp;|&nbsp; Tap to dance</div>
+
+<script>
+// ──────────────────────────────────────────────
+// CONFIG & STATE
+// ──────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H, handScale, handCX, handCY;
+
+function resize() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Reserve bottom for controls (~200px on mobile, ~170px desktop)
+  const controlH = window.innerWidth < 500 ? 200 : 175;
+  const availH = vh - controlH - 50; // 50 for title
+  const size = Math.min(vw, availH, 420);
+  W = vw;
+  H = Math.max(availH, 220);
+  canvas.width = W;
+  canvas.height = H;
+  handScale = size * 0.38;
+  handCX = W / 2;
+  handCY = H * 0.52;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ──────────────────────────────────────────────
+// AUDIO ENGINE
+// ──────────────────────────────────────────────
+let audioCtx = null;
+let isPlaying = false;
+let bpm = 90;
+let beatTime = 0;        // seconds since start
+let lastFrameTime = 0;
+let beatPhase = 0;       // 0–1 within one beat
+let beatCount = 0;
+let lastBeatFired = -1;
+let micMode = false;
+let micAnalyser = null;
+let micBuffer = null;
+
+// Scheduled audio nodes
+let scheduledNodes = [];
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+// ──────── Drum synthesis ────────
+function playKick(when) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.frequency.setValueAtTime(180, when);
+  osc.frequency.exponentialRampToValueAtTime(40, when + 0.08);
+  gain.gain.setValueAtTime(1.0, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + 0.25);
+  osc.start(when); osc.stop(when + 0.3);
+}
+
+function playSnare(when) {
+  // White noise burst
+  const bufferSize = audioCtx.sampleRate * 0.1;
+  const buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const gain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'highpass'; filter.frequency.value = 1200;
+  src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+  gain.gain.setValueAtTime(0.6, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + 0.15);
+  src.start(when); src.stop(when + 0.2);
+}
+
+function playHihat(when, open = false) {
+  const bufferSize = audioCtx.sampleRate * (open ? 0.2 : 0.06);
+  const buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const gain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'highpass'; filter.frequency.value = 7000;
+  src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+  gain.gain.setValueAtTime(0.25, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + (open ? 0.2 : 0.06));
+  src.start(when); src.stop(when + (open ? 0.25 : 0.1));
+}
+
+function playBass(when, freq, dur) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  gain.gain.setValueAtTime(0.5, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + dur);
+  osc.start(when); osc.stop(when + dur + 0.05);
+}
+
+// ──────── Beat patterns ────────
+// Each pattern is 16 steps (16th notes), values = accent strength 0..1
+const PATTERNS = {
+  hiphop: {
+    kick:   [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+    snare:  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    hihat:  [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+    bass:   [60,0,0,0, 0,0,55,0, 0,50,0,0, 45,0,0,0],
+    bpm: 90
+  },
+  waltz: {
+    kick:   [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0],
+    snare:  [0,0,0, 1,0,0, 0,0,0, 1,0,0, 0,0,0, 1,0,0],
+    hihat:  [0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0],
+    bass:   [55,0,0, 0,48,0, 0,0,0, 55,0,0, 0,48,0, 0,0,0],
+    steps: 18,
+    bpm: 72
+  },
+  techno: {
+    kick:   [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+    snare:  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    hihat:  [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1],
+    bass:   [50,0,0,0, 0,0,50,0, 0,0,0,0, 0,0,50,0],
+    bpm: 135
+  },
+  salsa: {
+    kick:   [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,0,0],
+    snare:  [0,0,1,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+    hihat:  [1,0,1,0, 0,1,0,0, 1,0,1,0, 0,1,0,0],
+    bass:   [55,0,0,0, 50,0,0,55, 0,0,50,0, 0,55,0,0],
+    bpm: 108
+  }
+};
+
+// Beat scheduler
+let nextBeatTime = 0;
+let currentStep = 0;
+let stepsPerBar = 16;
+let currentPattern = PATTERNS.hiphop;
+let scheduleInterval = null;
+
+function scheduleBeats() {
+  if (!isPlaying || !audioCtx) return;
+  const scheduleAhead = 0.1; // seconds
+  const now = audioCtx.currentTime;
+
+  const stepDur = (60 / bpm) / 4; // 16th note duration
+
+  while (nextBeatTime < now + scheduleAhead) {
+    const pat = currentPattern;
+    const steps = pat.steps || 16;
+    const step = currentStep % steps;
+
+    if (pat.kick[step]) playKick(nextBeatTime);
+    if (pat.snare[step]) playSnare(nextBeatTime);
+    if (pat.hihat[step]) playHihat(nextBeatTime);
+    if (pat.bass[step]) playBass(nextBeatTime, pat.bass[step] * 4, stepDur * 1.5);
+
+    // Record when this beat fires for animation sync
+    const beatCopy = { time: nextBeatTime, isKick: !!pat.kick[step], isSnare: !!pat.snare[step], step };
+    scheduledNodes.push(beatCopy);
+
+    nextBeatTime += stepDur;
+    currentStep++;
+  }
+
+  // Clean up old entries
+  scheduledNodes = scheduledNodes.filter(b => b.time > now - 0.5);
+}
+
+function startAudio() {
+  ensureAudio();
+  nextBeatTime = audioCtx.currentTime + 0.05;
+  currentStep = 0;
+  scheduleBeats();
+  scheduleInterval = setInterval(scheduleBeats, 25);
+}
+
+function stopAudio() {
+  clearInterval(scheduleInterval);
+  scheduledNodes = [];
+}
+
+// ──────────────────────────────────────────────
+// SKELETON HAND DRAWING
+// ──────────────────────────────────────────────
+
+// Finger descriptor: [baseAngle, seg0len, seg1len, seg2len] (angles in radians from vertical)
+// All lengths as fraction of handScale
+const FINGER_DEFS = [
+  // [baseX, baseY, baseAngle, seg0, seg1, seg2] — fractions of handScale
+  { name: 'thumb',  bx: -0.38, by: -0.10, angle: -1.15, segs: [0.28, 0.22, 0.18] },
+  { name: 'index',  bx: -0.24, by:  0.42, angle:  0.06, segs: [0.34, 0.26, 0.20] },
+  { name: 'middle', bx: -0.07, by:  0.46, angle:  0.00, segs: [0.37, 0.28, 0.22] },
+  { name: 'ring',   bx:  0.10, by:  0.43, angle: -0.05, segs: [0.34, 0.26, 0.20] },
+  { name: 'pinky',  bx:  0.26, by:  0.34, angle: -0.12, segs: [0.26, 0.20, 0.16] },
+];
+
+// Color palette
+const BONE_COLOR = '#d0e8ff';
+const BONE_GLOW  = 'rgba(160,210,255,0.35)';
+const JOINT_COLOR = '#ffffff';
+const JOINT_GLOW  = 'rgba(200,230,255,0.5)';
+const PALM_COLOR  = 'rgba(200,225,255,0.10)';
+const BONE_STROKE = 'rgba(180,220,255,0.7)';
+
+function drawBone(cx1, cy1, cx2, cy2, r) {
+  const dx = cx2 - cx1, dy = cy2 - cy1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 0.001) return;
+
+  // Glow
+  ctx.shadowColor = BONE_GLOW;
+  ctx.shadowBlur = 18;
+
+  // Capsule shape
+  ctx.beginPath();
+  const nx = -dy/len, ny = dx/len;
+  ctx.moveTo(cx1 + nx*r, cy1 + ny*r);
+  ctx.lineTo(cx2 + nx*r, cy2 + ny*r);
+  ctx.arc(cx2, cy2, r, Math.atan2(dy, dx) - Math.PI/2 + Math.PI, Math.atan2(dy, dx) + Math.PI/2 + Math.PI, true);
+  ctx.lineTo(cx1 - nx*r, cy1 - ny*r);
+  ctx.arc(cx1, cy1, r, Math.atan2(dy, dx) + Math.PI/2 + Math.PI, Math.atan2(dy, dx) - Math.PI/2 + Math.PI, true);
+  ctx.closePath();
+
+  ctx.fillStyle = 'rgba(20,30,50,0.7)';
+  ctx.fill();
+  ctx.strokeStyle = BONE_STROKE;
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawJoint(x, y, r, glow = 1) {
+  ctx.shadowColor = JOINT_GLOW;
+  ctx.shadowBlur = 12 * glow;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = JOINT_COLOR;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawPalm(cx, cy, w, h, beat) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  // Palm outline
+  ctx.shadowColor = BONE_GLOW;
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, w * 0.5, h * 0.55, 0, 0, Math.PI * 2);
+  ctx.fillStyle = PALM_COLOR;
+  ctx.fill();
+  ctx.strokeStyle = BONE_STROKE;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Metacarpal lines
+  for (let i = -2; i <= 2; i++) {
+    const x1 = i * w * 0.18;
+    const y1 = h * 0.35;
+    const x2 = i * w * 0.22;
+    const y2 = -h * 0.4;
+    ctx.strokeStyle = 'rgba(160,210,255,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  // Wrist bones
+  drawBone(-w*0.18, h*0.4, -w*0.14, h*0.52, w*0.07);
+  drawBone( w*0.18, h*0.4,  w*0.14, h*0.52, w*0.07);
+  drawJoint(-w*0.16, h*0.5, w*0.05);
+  drawJoint( w*0.16, h*0.5, w*0.05);
+
+  ctx.restore();
+}
+
+// ──────────────────────────────────────────────
+// DANCE STYLES — return per-finger angle offsets
+// state = { t, beat, bpm, beatPhase, fingers: [{j0,j1,j2}] }
+// returns array of 5 finger states: [{j0, j1, j2, baseAngleDelta, spread}]
+// ──────────────────────────────────────────────
+
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+function pulse(phase, sharpness = 4) { return Math.exp(-sharpness * Math.pow((phase % 1) - 0.5, 2)); }
+
+const DANCE_STYLES = {
+
+  tap: (t, bp, bc, kickStrength, snareStrength) => {
+    // Fingers tap down on beat; stagger each finger
+    return FINGER_DEFS.map((_, i) => {
+      const offset = i * 0.12; // stagger
+      const phase = (bp + offset) % 1;
+      const tap = Math.max(0, Math.sin(phase * Math.PI * 2 - Math.PI/2 + Math.PI)) * 0.8;
+      const j1 = tap * 0.7;
+      const j2 = tap * 0.5;
+      const handBob = kickStrength * 0.15;
+      return { j0: tap * 0.4, j1, j2, wristY: handBob * 30, baseAngleDelta: 0, spread: 0 };
+    });
+  },
+
+  wave: (t, bp, bc, kickStrength, snareStrength) => {
+    return FINGER_DEFS.map((_, i) => {
+      const offset = i * 0.18;
+      const phase = (t * 2 + offset) % 1;
+      const wave = Math.sin(phase * Math.PI * 2) * 0.5 + 0.5;
+      const j1 = wave * 0.6;
+      const j2 = wave * 0.4;
+      const sway = Math.sin(t * 1.5) * 0.15;
+      return { j0: wave * 0.3, j1, j2, wristY: Math.sin(t * 2) * 15, baseAngleDelta: sway, spread: 0 };
+    });
+  },
+
+  jazz: (t, bp, bc, kickStrength, snareStrength) => {
+    const snap = snareStrength > 0.3 ? snareStrength : 0;
+    const openClose = Math.sin(t * Math.PI * 3);
+    return FINGER_DEFS.map((_, i) => {
+      const spread = (openClose * 0.5 + 0.5) * 0.25 + snap * 0.15;
+      const j0 = Math.abs(Math.sin(t * 2.5 + i * 0.3)) * 0.3;
+      const j1 = Math.abs(Math.sin(t * 2.5 + i * 0.4 + 1)) * 0.25;
+      const shake = Math.sin(t * 18 + i) * 0.06;
+      return { j0: j0 + shake, j1, j2: j1 * 0.6, wristY: Math.sin(t * 3) * 20, baseAngleDelta: snap * 0.1, spread };
+    });
+  },
+
+  robot: (t, bp, bc, kickStrength, snareStrength) => {
+    // Quantized jerky movements
+    const snap = (v, steps) => Math.round(v * steps) / steps;
+    const beatSnap = snap(bp, 4);
+    const globalRot = snap(Math.sin(t * 0.8), 6) * 0.2;
+    return FINGER_DEFS.map((_, i) => {
+      const j0 = snap(Math.abs(Math.sin(t * 0.7 + i * 1.1)), 3) * 0.5;
+      const j1 = snap(Math.abs(Math.sin(t * 0.9 + i * 0.8 + 1)), 3) * 0.6;
+      const j2 = snap(Math.abs(Math.cos(t * 0.6 + i * 0.9)), 3) * 0.4;
+      const w = snap(Math.sin(t * 0.5) * 25, 4);
+      return { j0, j1, j2, wristY: w + kickStrength * 20, baseAngleDelta: globalRot, spread: 0 };
+    });
+  },
+
+  thriller: (t, bp, bc, kickStrength, snareStrength) => {
+    // Slow, spooky, drooping curls
+    const droop = Math.sin(t * 0.4) * 0.5 + 0.5;
+    const creep = Math.sin(t * 0.9);
+    return FINGER_DEFS.map((_, i) => {
+      const curl = (Math.sin(t * 0.6 + i * 0.4) * 0.5 + 0.5) * 0.7;
+      const twitch = Math.sin(t * 8 + i * 2) * 0.04 * (bc % 4 === 0 ? 1 : 0);
+      const j0 = curl + twitch;
+      const j1 = curl * 0.8 + droop * 0.2;
+      const j2 = curl * 0.9 + droop * 0.15;
+      const sway = Math.sin(t * 0.7) * 0.12;
+      const bob = creep * 12;
+      return { j0, j1, j2, wristY: bob, baseAngleDelta: sway + twitch, spread: -0.05 };
+    });
+  },
+
+  rave: (t, bp, bc, kickStrength, snareStrength) => {
+    // Wild fast movements, every beat explodes
+    const kick = kickStrength;
+    const spin = t * 4;
+    return FINGER_DEFS.map((_, i) => {
+      const phase = (bp * 2 + i * 0.2) % 1;
+      const wild = Math.sin(phase * Math.PI * 4 + i) * 0.7;
+      const j0 = (wild * 0.5 + 0.5) * 0.8 + kick * 0.3;
+      const j1 = Math.abs(Math.sin(t * 5 + i * 1.2)) * 0.7;
+      const j2 = Math.abs(Math.cos(t * 6 + i * 0.9)) * 0.6;
+      const strobe = kick * Math.abs(Math.sin(t * 30 + i)) * 20;
+      return { j0, j1, j2, wristY: strobe - Math.sin(t * 4) * 15, baseAngleDelta: Math.sin(spin) * 0.2, spread: wild * 0.12 };
+    });
+  }
+};
+
+// ──────────────────────────────────────────────
+// ANIMATION STATE
+// ──────────────────────────────────────────────
+let currentStyle = 'tap';
+let currentMusic = 'hiphop';
+let animT = 0;
+let kickStrength = 0;
+let snareStrength = 0;
+let lastBeatCount = 0;
+
+// Particles
+const particles = [];
+function spawnParticles(cx, cy, color, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 3 + 1;
+    particles.push({
+      x: cx + (Math.random()-0.5)*20,
+      y: cy + (Math.random()-0.5)*20,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      life: 1,
+      decay: Math.random() * 0.03 + 0.02,
+      size: Math.random() * 4 + 2,
+      color
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.12;
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.globalAlpha = p.life * 0.8;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Visualizer bars (from scheduled beats)
+const vizBars = [];
+function updateViz(kickS, snareS, hihatS) {
+  // Decay
+  for (let i = 0; i < vizBars.length; i++) vizBars[i] *= 0.88;
+  if (vizBars.length === 0) for (let i = 0; i < 24; i++) vizBars.push(0);
+
+  const bassInfluence = kickS * 0.8;
+  const midInfluence  = snareS * 0.5;
+  for (let i = 0; i < vizBars.length; i++) {
+    const t = i / vizBars.length;
+    vizBars[i] = Math.max(vizBars[i], bassInfluence * (1 - t) + midInfluence * t + Math.random() * (kickS + snareS) * 0.3);
+  }
+}
+
+function drawViz() {
+  const barW = Math.min(W, 640) - 24;
+  const barH = 36;
+  const startX = (W - barW) / 2;
+  const y0 = H - 8;
+  const bw = (barW / vizBars.length) - 1.5;
+
+  for (let i = 0; i < vizBars.length; i++) {
+    const h = vizBars[i] * barH;
+    const t = i / vizBars.length;
+    const hue = 200 + t * 60;
+    ctx.fillStyle = `hsla(${hue}, 80%, 65%, 0.6)`;
+    ctx.shadowColor = `hsla(${hue}, 80%, 65%, 0.4)`;
+    ctx.shadowBlur = 4;
+    ctx.fillRect(startX + i * (bw + 1.5), y0 - h, bw, h);
+  }
+  ctx.shadowBlur = 0;
+}
+
+// ──────────────────────────────────────────────
+// MAIN RENDER
+// ──────────────────────────────────────────────
+let frameId;
+
+function render(timestamp) {
+  frameId = requestAnimationFrame(render);
+  const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.05);
+  lastFrameTime = timestamp;
+
+  // Advance animation time
+  if (isPlaying) {
+    animT += dt;
+    beatPhase = ((audioCtx ? audioCtx.currentTime : animT) * bpm / 60) % 1;
+    beatCount = Math.floor((audioCtx ? audioCtx.currentTime : animT) * bpm / 60);
+  } else {
+    // Idle breathing
+    animT += dt * 0.3;
+    beatPhase = 0;
+    beatCount = 0;
+    kickStrength *= 0.95;
+    snareStrength *= 0.95;
+  }
+
+  // Detect beats from scheduled nodes
+  if (audioCtx && isPlaying) {
+    const now = audioCtx.currentTime;
+    for (const b of scheduledNodes) {
+      if (Math.abs(b.time - now) < 0.04 && b.step !== lastBeatFired) {
+        lastBeatFired = b.step;
+        if (b.isKick) {
+          kickStrength = 1.0;
+          spawnParticles(handCX, handCY, '#ff8844', 8);
+          document.getElementById('beat-indicator').classList.add('pulse');
+          setTimeout(() => document.getElementById('beat-indicator').classList.remove('pulse'), 80);
+        }
+        if (b.isSnare) {
+          snareStrength = 1.0;
+          spawnParticles(handCX, handCY - handScale*0.3, '#44aaff', 5);
+        }
+      }
+    }
+  }
+
+  // Decay strengths
+  kickStrength  *= 0.88;
+  snareStrength *= 0.85;
+
+  // Mic mode
+  if (micMode && micAnalyser) {
+    micAnalyser.getByteTimeDomainData(micBuffer);
+    let energy = 0;
+    for (let i = 0; i < micBuffer.length; i++) {
+      const v = (micBuffer[i] - 128) / 128;
+      energy += v * v;
+    }
+    energy = Math.sqrt(energy / micBuffer.length) * 8;
+    if (energy > 0.3) {
+      kickStrength = Math.max(kickStrength, energy);
+      spawnParticles(handCX, handCY, '#88ff44', 4);
+    }
+  }
+
+  updateViz(kickStrength, snareStrength, 0);
+
+  // ── Draw ──
+  ctx.clearRect(0, 0, W, H);
+
+  // Background gradient
+  const bg = ctx.createRadialGradient(handCX, handCY, 0, handCX, handCY, W*0.6);
+  bg.addColorStop(0, 'rgba(10,15,40,1)');
+  bg.addColorStop(1, 'rgba(5,5,15,1)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Particles
+  updateParticles();
+
+  // Viz bars
+  if (isPlaying) drawViz();
+
+  // Get dance state
+  const styleFn = DANCE_STYLES[currentStyle] || DANCE_STYLES.tap;
+  const fingerStates = styleFn(animT, beatPhase, beatCount, kickStrength, snareStrength);
+
+  // Global hand shake on beat
+  const globalShakeX = kickStrength * (Math.random()-0.5) * 8;
+  const globalShakeY = kickStrength * (Math.random()-0.5) * 8;
+
+  // Average wrist Y offset
+  let avgWristY = 0;
+  for (const fs of fingerStates) avgWristY += (fs.wristY || 0);
+  avgWristY /= fingerStates.length;
+
+  const cx = handCX + globalShakeX;
+  const cy = handCY + avgWristY + globalShakeY;
+  const s = handScale;
+
+  // Draw palm
+  drawPalm(cx, cy, s * 0.65, s * 0.6, kickStrength);
+
+  // Draw fingers
+  for (let fi = 0; fi < FINGER_DEFS.length; fi++) {
+    const def = FINGER_DEFS[fi];
+    const fs = fingerStates[fi];
+    const boneR = s * 0.045;
+
+    // Finger base in world coords
+    const bx = cx + def.bx * s;
+    const by = cy - def.by * s;
+
+    // Base angle + dance delta + spread
+    let angle = def.angle + (fs.baseAngleDelta || 0) + fi * (fs.spread || 0) * 0.8;
+
+    // Clamp joint angles 0..1 where 1 = fully curled (~1.4 rad)
+    const maxCurl = 1.2;
+    const j0 = (fs.j0 || 0) * maxCurl;
+    const j1 = (fs.j1 || 0) * maxCurl;
+    const j2 = (fs.j2 || 0) * maxCurl;
+
+    let px = bx, py = by;
+    let cumAngle = angle; // running angle
+
+    const segLengths = def.segs.map(l => l * s);
+
+    // Segment 0
+    cumAngle -= j0;
+    let ex0 = px + Math.sin(cumAngle) * segLengths[0];
+    let ey0 = py - Math.cos(cumAngle) * segLengths[0];
+    drawBone(px, py, ex0, ey0, boneR);
+    drawJoint(px, py, boneR * 1.2, 1 + kickStrength * 0.5);
+
+    // Segment 1
+    cumAngle -= j1;
+    let ex1 = ex0 + Math.sin(cumAngle) * segLengths[1];
+    let ey1 = ey0 - Math.cos(cumAngle) * segLengths[1];
+    drawBone(ex0, ey0, ex1, ey1, boneR * 0.9);
+    drawJoint(ex0, ey0, boneR * 1.05);
+
+    // Segment 2 (fingertip)
+    cumAngle -= j2;
+    let ex2 = ex1 + Math.sin(cumAngle) * segLengths[2];
+    let ey2 = ey1 - Math.cos(cumAngle) * segLengths[2];
+    drawBone(ex1, ey1, ex2, ey2, boneR * 0.75);
+    drawJoint(ex1, ey1, boneR * 0.9);
+
+    // Fingertip cap
+    drawJoint(ex2, ey2, boneR * 0.65, 0.8);
+
+    // Tap spark at fingertip on beat
+    if (kickStrength > 0.6 && (fi === 1 || fi === 3)) {
+      ctx.globalAlpha = kickStrength * 0.6;
+      const sparkG = ctx.createRadialGradient(ex2, ey2, 0, ex2, ey2, 15);
+      sparkG.addColorStop(0, '#ffffaa');
+      sparkG.addColorStop(1, 'transparent');
+      ctx.fillStyle = sparkG;
+      ctx.beginPath();
+      ctx.arc(ex2, ey2, 15, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Idle glow ring
+  if (!isPlaying) {
+    const breathe = Math.sin(animT * 1.5) * 0.5 + 0.5;
+    ctx.strokeStyle = `rgba(100,160,255,${breathe * 0.15})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, s * 0.7, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// ──────────────────────────────────────────────
+// UI CONTROLS
+// ──────────────────────────────────────────────
+
+// Dance style buttons
+document.querySelectorAll('.style-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentStyle = btn.dataset.style;
+  });
+});
+
+// Music buttons
+document.querySelectorAll('.music-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMusic = btn.dataset.music;
+    currentPattern = PATTERNS[currentMusic];
+    bpm = currentPattern.bpm;
+    document.getElementById('tempo-slider').value = bpm;
+    document.getElementById('tempo-val').textContent = bpm + ' BPM';
+    if (isPlaying) {
+      stopAudio();
+      startAudio();
+    }
+  });
+});
+
+// Play button
+const playBtn = document.getElementById('play-btn');
+function togglePlay() {
+  isPlaying = !isPlaying;
+  if (isPlaying) {
+    ensureAudio();
+    startAudio();
+    playBtn.innerHTML = '&#9646;&#9646;';
+    playBtn.style.background = 'rgba(255,80,60,0.2)';
+  } else {
+    stopAudio();
+    playBtn.innerHTML = '&#9654;';
+    playBtn.style.background = 'rgba(80,120,255,0.15)';
+  }
+}
+playBtn.addEventListener('click', togglePlay);
+canvas.addEventListener('click', togglePlay);
+
+// Tempo slider
+const tempoSlider = document.getElementById('tempo-slider');
+const tempoVal    = document.getElementById('tempo-val');
+tempoSlider.addEventListener('input', () => {
+  bpm = parseInt(tempoSlider.value);
+  tempoVal.textContent = bpm + ' BPM';
+  if (isPlaying) { stopAudio(); startAudio(); }
+});
+
+// Mic button
+const micBtn = document.getElementById('mic-btn');
+micBtn.addEventListener('click', async () => {
+  if (micMode) {
+    micMode = false;
+    micBtn.classList.remove('active');
+    micBtn.textContent = '🎤 MIC';
+    return;
+  }
+  try {
+    ensureAudio();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const source = audioCtx.createMediaStreamSource(stream);
+    micAnalyser = audioCtx.createAnalyser();
+    micAnalyser.fftSize = 256;
+    source.connect(micAnalyser);
+    micBuffer = new Uint8Array(micAnalyser.fftSize);
+    micMode = true;
+    micBtn.classList.add('active');
+    micBtn.textContent = '🎤 LIVE';
+  } catch(e) {
+    alert('Microphone access denied or unavailable.');
+  }
+});
+
+// Keyboard shortcuts
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  const styleKeys = { '1':'tap','2':'wave','3':'jazz','4':'robot','5':'thriller','6':'rave' };
+  if (styleKeys[e.key]) {
+    currentStyle = styleKeys[e.key];
+    document.querySelectorAll('.style-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.style === currentStyle);
+    });
+  }
+});
+
+// ──────────────────────────────────────────────
+// KICK OFF
+// ──────────────────────────────────────────────
+currentPattern = PATTERNS.hiphop;
+lastFrameTime = performance.now();
+render(performance.now());
+</script>
+</body>
+</html>
