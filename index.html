@@ -466,8 +466,22 @@ function drawBone(x1, y1, x2, y2, r1, r2) {
   const ang = Math.atan2(dy, dx);
   const rS = (r1 + r2) * 0.24; // midshaft (diaphysis) is narrower than either end
 
+  // Cylindrical shading: gradient runs perpendicular to bone axis.
+  // Light source upper-left → highlight on nx side, shadow on −nx side.
+  const midX = (x1+x2)*0.5, midY = (y1+y2)*0.5;
+  const maxR = Math.max(r1, r2);
+  const grad = ctx.createLinearGradient(
+    midX - nx*maxR*1.15, midY - ny*maxR*1.15,  // shadow edge
+    midX + nx*maxR*1.15, midY + ny*maxR*1.15   // highlight edge
+  );
+  grad.addColorStop(0,    'rgba(10,16,40,0.97)');
+  grad.addColorStop(0.22, 'rgba(75,120,195,0.88)');
+  grad.addColorStop(0.48, 'rgba(195,225,255,0.97)');  // cortical highlight
+  grad.addColorStop(0.68, 'rgba(130,175,235,0.88)');
+  grad.addColorStop(1,    'rgba(18,28,62,0.95)');
+
   ctx.shadowColor = BONE_GLOW;
-  ctx.shadowBlur = 18;
+  ctx.shadowBlur = 20;
   ctx.beginPath();
 
   // Left edge: bezier narrows from base epiphysis → diaphysis → distal epiphysis
@@ -477,45 +491,50 @@ function drawBone(x1, y1, x2, y2, r1, r2) {
     x2 + nx*rS - dx*0.28, y2 + ny*rS - dy*0.28,
     x2 + nx*r2, y2 + ny*r2
   );
-  // Distal end cap (anticlockwise = counterclockwise in canvas = curves over the tip)
   ctx.arc(x2, y2, r2, ang + Math.PI/2, ang + Math.PI*3/2, true);
-  // Right edge: bezier back to base
   ctx.bezierCurveTo(
     x2 - nx*rS - dx*0.28, y2 - ny*rS - dy*0.28,
     x1 - nx*rS + dx*0.28, y1 - ny*rS + dy*0.28,
     x1 - nx*r1, y1 - ny*r1
   );
-  // Proximal end cap
   ctx.arc(x1, y1, r1, ang + Math.PI*3/2, ang + Math.PI/2, true);
   ctx.closePath();
 
-  ctx.fillStyle = 'rgba(15,25,45,0.80)';
+  ctx.fillStyle = grad;
   ctx.fill();
-  ctx.strokeStyle = BONE_STROKE;
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = 'rgba(160,210,255,0.50)';
+  ctx.lineWidth = 0.9;
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Cortical bone highlight — subtle sheen along one side of the shaft
+  // Specular streak — narrow bright line near the highlight peak
   ctx.beginPath();
-  ctx.strokeStyle = 'rgba(200,230,255,0.20)';
-  ctx.lineWidth = Math.max(rS * 0.5, 0.7);
+  ctx.strokeStyle = 'rgba(240,252,255,0.52)';
+  ctx.lineWidth = Math.max(rS * 0.38, 0.6);
   ctx.lineCap = 'round';
-  ctx.moveTo(x1 + nx*rS*0.55 + dx*0.10, y1 + ny*rS*0.55 + dy*0.10);
+  ctx.moveTo(x1 + nx*rS*0.52 + dx*0.09, y1 + ny*rS*0.52 + dy*0.09);
   ctx.bezierCurveTo(
-    x1 + nx*rS*0.60 + dx*0.32, y1 + ny*rS*0.60 + dy*0.32,
-    x2 + nx*rS*0.60 - dx*0.32, y2 + ny*rS*0.60 - dy*0.32,
-    x2 + nx*rS*0.55 - dx*0.10, y2 + ny*rS*0.55 - dy*0.10
+    x1 + nx*rS*0.58 + dx*0.30, y1 + ny*rS*0.58 + dy*0.30,
+    x2 + nx*rS*0.58 - dx*0.30, y2 + ny*rS*0.58 - dy*0.30,
+    x2 + nx*rS*0.52 - dx*0.09, y2 + ny*rS*0.52 - dy*0.09
   );
   ctx.stroke();
 }
 
 function drawJoint(x, y, r, glow = 1) {
   ctx.shadowColor = JOINT_GLOW;
-  ctx.shadowBlur = 12 * glow;
+  ctx.shadowBlur = 14 * glow;
+  // Spherical shading: radial gradient with highlight offset upper-left
+  const hx = x - r * 0.30, hy = y - r * 0.34;
+  const jGrad = ctx.createRadialGradient(hx, hy, 0, x, y, r);
+  jGrad.addColorStop(0,    '#ffffff');
+  jGrad.addColorStop(0.30, 'rgba(220,238,255,0.97)');
+  jGrad.addColorStop(0.60, 'rgba(135,180,235,0.90)');
+  jGrad.addColorStop(0.85, 'rgba(80,120,195,0.82)');
+  jGrad.addColorStop(1,    'rgba(35,55,115,0.75)');
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fillStyle = JOINT_COLOR;
+  ctx.fillStyle = jGrad;
   ctx.fill();
   ctx.shadowBlur = 0;
 }
@@ -526,17 +545,24 @@ function drawKnuckle(x, y, r, px, py, glow = 1) {
   const offset = r * 0.40;
   const cR = r * 0.74;
   ctx.shadowColor = JOINT_GLOW;
-  ctx.shadowBlur = 14 * glow;
+  ctx.shadowBlur = 16 * glow;
   for (const sign of [-1, 1]) {
+    const cx2 = x + px*offset*sign, cy2 = y + py*offset*sign;
+    const hx = cx2 - cR*0.28, hy = cy2 - cR*0.32;
+    const kGrad = ctx.createRadialGradient(hx, hy, 0, cx2, cy2, cR);
+    kGrad.addColorStop(0,    '#ffffff');
+    kGrad.addColorStop(0.35, 'rgba(218,238,255,0.97)');
+    kGrad.addColorStop(0.65, 'rgba(125,170,230,0.88)');
+    kGrad.addColorStop(1,    'rgba(40,65,135,0.75)');
     ctx.beginPath();
-    ctx.arc(x + px*offset*sign, y + py*offset*sign, cR, 0, Math.PI*2);
-    ctx.fillStyle = JOINT_COLOR;
+    ctx.arc(cx2, cy2, cR, 0, Math.PI*2);
+    ctx.fillStyle = kGrad;
     ctx.fill();
   }
-  // Intercondylar notch (small dark divot between the two condyles)
+  // Intercondylar notch
   ctx.beginPath();
   ctx.arc(x, y, r * 0.28, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(10,18,38,0.70)';
+  ctx.fillStyle = 'rgba(8,14,35,0.78)';
   ctx.fill();
   ctx.shadowBlur = 0;
 }
@@ -550,15 +576,19 @@ function drawPalm(cx, cy, s, beat) {
   ctx.save();
   ctx.translate(cx, cy);
 
-  // Palm silhouette
+  // Palm silhouette — radial depth gradient (lit centre, shadowed rim)
   ctx.shadowColor = BONE_GLOW;
-  ctx.shadowBlur = 20;
+  ctx.shadowBlur = 24;
   ctx.beginPath();
   ctx.ellipse(0, 0, w * 0.50, h * 0.55, 0, 0, Math.PI * 2);
-  ctx.fillStyle = PALM_COLOR;
+  const palmGrad = ctx.createRadialGradient(w*0.04, -h*0.08, 0, 0, 0, h*0.58);
+  palmGrad.addColorStop(0,   'rgba(55,90,170,0.22)');
+  palmGrad.addColorStop(0.5, 'rgba(25,42,90,0.14)');
+  palmGrad.addColorStop(1,   'rgba(8,14,38,0.06)');
+  ctx.fillStyle = palmGrad;
   ctx.fill();
-  ctx.strokeStyle = BONE_STROKE;
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(160,210,255,0.40)';
+  ctx.lineWidth = 1.2;
   ctx.stroke();
   ctx.shadowBlur = 0;
 
@@ -658,7 +688,7 @@ const DANCE_STYLES = {
       handBobY:   kickStrength * 22,
       wristFlex:  kickStrength * -0.28,
       armSway:    Math.sin(t * 1.2) * 0.06,
-      forearmRot: 0,
+      forearmRot: t * 0.55,   // slow, steady tap-along spin
     };
   },
 
@@ -674,7 +704,7 @@ const DANCE_STYLES = {
       handBobY:   Math.sin(t * 2) * 15,
       wristFlex:  Math.sin(t * 1.8) * 0.30,
       armSway:    Math.sin(t * 0.8) * 0.15,
-      forearmRot: Math.sin(t * 1.1) * 0.40,
+      forearmRot: t * 0.85,   // flowing wave roll
     };
   },
 
@@ -692,7 +722,7 @@ const DANCE_STYLES = {
       handBobY:   Math.sin(t * 3) * 20,
       wristFlex:  snareStrength * 0.42 + Math.sin(t * 3) * 0.18,
       armSway:    Math.sin(t * 2.5) * 0.22,
-      forearmRot: Math.sin(t * 2.2) * 0.50,
+      forearmRot: t * 1.45 + snareStrength * 0.4,   // jazz snap-accelerated spin
     };
   },
 
@@ -710,7 +740,7 @@ const DANCE_STYLES = {
       handBobY:   snap(Math.sin(t * 0.5) * 25, 4) + kickStrength * 20,
       wristFlex:  snap(Math.sin(t * 0.7), 4) * 0.32,
       armSway:    snap(Math.sin(t * 0.4), 3) * 0.15,
-      forearmRot: snap(Math.sin(t * 0.5), 3) * 0.55,
+      forearmRot: snap(t * 0.95, 5),   // quantized step-rotation (robot clicks)
     };
   },
 
@@ -728,7 +758,7 @@ const DANCE_STYLES = {
       handBobY:   Math.sin(t * 0.9) * 12,
       wristFlex:  Math.sin(t * 0.5) * 0.44 + 0.20,  // droopy limp wrist
       armSway:    Math.sin(t * 0.6) * 0.20,
-      forearmRot: Math.sin(t * 0.7) * 0.25,
+      forearmRot: t * 0.35,   // slow creeping rotation (thriller crawl)
     };
   },
 
